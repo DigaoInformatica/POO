@@ -81,4 +81,3 @@ for col in columns:
 preencher_lista_livros()
 
 root.mainloop()
-
