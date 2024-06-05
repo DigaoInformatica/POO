@@ -1,5 +1,5 @@
 import openpyxl
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Função para encontrar a próxima linha vazia em uma planilha
 def encontrar_proxima_linha(sheet):
@@ -28,10 +28,12 @@ class Livro:
         sheet.cell(row=row, column=5, value=self.status)
         workbook.save('POO.xlsx')
 
+# Subclasse LivroFisico
 class LivroFisico(Livro):
     def __init__(self, titulo, autor, genero, status='disponível'):
         super().__init__(titulo, autor, genero, 'Fisico', status)
 
+# Subclasse LivroDigital
 class LivroDigital(Livro):
     def __init__(self, titulo, autor, genero, status='disponível'):
         super().__init__(titulo, autor, genero, 'Digital', status)
@@ -91,9 +93,11 @@ class Sistema:
 
     def listar(self, tipo):
         sheet = self.workbook[tipo.upper()]
+        resultados = []
         for row in sheet.iter_rows(min_row=3, max_row=sheet.max_row, min_col=1, max_col=5, values_only=True):
             if any(cell is not None for cell in row):
-                print(row)
+                resultados.append(row)
+        return resultados
 
     def excluir(self, tipo, identificador):
         sheet = self.workbook[tipo.upper()]
@@ -113,7 +117,9 @@ class Sistema:
             if row[0].value == titulo and row[4].value == 'disponível':
                 row[4].value = 'emprestado'
                 self.workbook.save(self.arquivo_excel)
-                self.adicionar_reserva(Reserva(titulo, row[3].value, id_usuario, datetime.now().date()))
+                data_reserva = datetime.now().date()
+                data_devolucao = data_reserva + timedelta(days=15)
+                self.adicionar_reserva(Reserva(titulo, row[3].value, id_usuario, data_reserva, data_devolucao))
                 print(f'Livro {titulo} emprestado para o usuário {id_usuario}.')
                 return
         print(f'Livro {titulo} não está disponível para empréstimo.')
@@ -153,12 +159,27 @@ class Sistema:
                 resultados.append(row)
         return resultados
 
+    def reservar_livro(self, titulo, id_usuario):
+        sheet_livros = self.workbook['LIVROS']
+        for row in sheet_livros.iter_rows(min_row=3, max_row=sheet_livros.max_row, min_col=1, max_col=5):
+            if row[0].value == titulo and row[4].value == 'disponível':
+                row[4].value = 'reservado'
+                self.workbook.save(self.arquivo_excel)
+                self.adicionar_reserva(Reserva(titulo, row[3].value, id_usuario, datetime.now().date()))
+                print(f'Livro {titulo} reservado pelo usuário {id_usuario}.')
+                return
+        print(f'Livro {titulo} não está disponível para reserva.')
+
 if __name__ == "__main__":
     sistema = Sistema('POO.xlsx')
 
     # Adição de livro físico
     livro1 = LivroFisico('O Senhor dos Anéis', 'J.R.R. Tolkien', 'Fantasia')
     sistema.adicionar_livro(livro1)
+
+    # Adição de livro digital
+    livro2 = LivroDigital('1984', 'George Orwell', 'Distopia')
+    sistema.adicionar_livro(livro2)
 
     # Adição de usuário
     usuario1 = Usuario(1, 'João da Silva', '12345678900', 'senha123', 'comum')
@@ -169,6 +190,9 @@ if __name__ == "__main__":
 
     # Devolução de livro
     sistema.devolver_livro('O Senhor dos Anéis', 1)
+
+    # Reserva de livro
+    sistema.reservar_livro('1984', 1)
 
     # Pesquisa avançada
     resultados = sistema.pesquisa_avancada(titulo='1984', autor='Orwell')
