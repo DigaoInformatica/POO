@@ -9,6 +9,7 @@ def encontrar_proxima_linha(sheet):
                 return cell.row
     return sheet.max_row + 1
 
+
 # Classe Livro
 class Livro:
     def __init__(self, titulo, autor, genero, tipo, status):
@@ -30,12 +31,12 @@ class Livro:
 
 # Subclasse LivroFisico
 class LivroFisico(Livro):
-    def __init__(self, titulo, autor, genero, status='disponível'):
-        super().__init__(titulo, autor, genero, 'Fisico', status)
+    def __init__(self, titulo, autor, genero, status='Disponível'):
+        super().__init__(titulo, autor, genero, 'Físico', status)
 
 # Subclasse LivroDigital
 class LivroDigital(Livro):
-    def __init__(self, titulo, autor, genero, status='disponível'):
+    def __init__(self, titulo, autor, genero, status='Disponível'):
         super().__init__(titulo, autor, genero, 'Digital', status)
 
 # Classe Usuario
@@ -108,14 +109,20 @@ class Sistema:
                 break
         self.workbook.save(self.arquivo_excel)
 
+    def excluir_usuario(self, id_usuario):
+        self.excluir('USUARIOS', id_usuario)
+
+    def excluir_livro(self, titulo):
+        self.excluir('LIVROS', titulo)
+
     def salvar(self):
         self.workbook.save(self.arquivo_excel)
 
     def emprestar_livro(self, titulo, id_usuario):
         sheet_livros = self.workbook['LIVROS']
         for row in sheet_livros.iter_rows(min_row=3, max_row=sheet_livros.max_row, min_col=1, max_col=5):
-            if row[0].value == titulo and row[4].value == 'disponível':
-                row[4].value = 'emprestado'
+            if row[0].value == titulo and row[4].value == 'Disponível':
+                row[4].value = 'Emprestado'
                 self.workbook.save(self.arquivo_excel)
                 data_reserva = datetime.now().date()
                 data_devolucao = data_reserva + timedelta(days=15)
@@ -128,12 +135,13 @@ class Sistema:
         sheet_livros = self.workbook['LIVROS']
         sheet_reservas = self.workbook['RESERVAS']
         for row in sheet_livros.iter_rows(min_row=3, max_row=sheet_livros.max_row, min_col=1, max_col=5):
-            if row[0].value == titulo and row[4].value == 'emprestado':
-                row[4].value = 'disponível'
+            if row[0].value == titulo and row[4].value == 'Emprestado':
+                row[4].value = 'Disponível'
                 self.workbook.save(self.arquivo_excel)
                 for res_row in sheet_reservas.iter_rows(min_row=3, max_row=sheet_reservas.max_row, min_col=1, max_col=5):
                     if res_row[0].value == titulo and res_row[2].value == id_usuario and res_row[4].value is None:
                         res_row[4].value = datetime.now().date()
+                        res_row[5].value = datetime.now().time().strftime('%H:%M:%S')
                         self.workbook.save(self.arquivo_excel)
                         print(f'Livro {titulo} devolvido pelo usuário {id_usuario}.')
                         return
@@ -162,8 +170,8 @@ class Sistema:
     def reservar_livro(self, titulo, id_usuario):
         sheet_livros = self.workbook['LIVROS']
         for row in sheet_livros.iter_rows(min_row=3, max_row=sheet_livros.max_row, min_col=1, max_col=5):
-            if row[0].value == titulo and row[4].value == 'disponível':
-                row[4].value = 'reservado'
+            if row[0].value == titulo and row[4].value == 'Disponível':
+                row[4].value = 'Reservado'
                 self.workbook.save(self.arquivo_excel)
                 self.adicionar_reserva(Reserva(titulo, row[3].value, id_usuario, datetime.now().date()))
                 print(f'Livro {titulo} reservado pelo usuário {id_usuario}.')
@@ -172,29 +180,3 @@ class Sistema:
 
 if __name__ == "__main__":
     sistema = Sistema('POO.xlsx')
-
-    # Adição de livro físico
-    livro1 = LivroFisico('O Senhor dos Anéis', 'J.R.R. Tolkien', 'Fantasia')
-    sistema.adicionar_livro(livro1)
-
-    # Adição de livro digital
-    livro2 = LivroDigital('1984', 'George Orwell', 'Distopia')
-    sistema.adicionar_livro(livro2)
-
-    # Adição de usuário
-    usuario1 = Usuario(1, 'João da Silva', '12345678900', 'senha123', 'comum')
-    sistema.adicionar_usuario(usuario1)
-
-    # Empréstimo de livro
-    sistema.emprestar_livro('O Senhor dos Anéis', 1)
-
-    # Devolução de livro
-    sistema.devolver_livro('O Senhor dos Anéis', 1)
-
-    # Reserva de livro
-    sistema.reservar_livro('1984', 1)
-
-    # Pesquisa avançada
-    resultados = sistema.pesquisa_avancada(titulo='1984', autor='Orwell')
-    for resultado in resultados:
-        print(resultado)
